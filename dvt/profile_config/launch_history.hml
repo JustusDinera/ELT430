@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<java version="1.8.0_112" class="java.beans.XMLDecoder">
+ <object class="com.ti.dvt.profile.LaunchHistorySystem" id="LaunchHistorySystem0">
+  <void property="idHistoryMap">
+   <void method="put">
+    <string>Texas Instruments XDS100v2 USB Debug Probe/CLA_0</string>
+    <object class="com.ti.dvt.profile.LaunchHistory">
+     <void property="contextId">
+      <string>c0200</string>
+     </void>
+     <void property="orderedItems">
+      <object class="java.util.ArrayList"/>
+     </void>
+    </object>
+   </void>
+   <void method="put">
+    <string>Texas Instruments XDS100v2 USB Debug Probe/C28xx</string>
+    <object class="com.ti.dvt.profile.LaunchHistory">
+     <void property="contextId">
+      <string>140280</string>
+     </void>
+     <void property="orderedItems">
+      <object class="java.util.ArrayList"/>
+     </void>
+    </object>
+   </void>
+  </void>
+ </object>
+</java>
