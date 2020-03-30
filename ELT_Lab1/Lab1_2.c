@@ -1,5 +1,5 @@
 /*
- * Lab1_1.c
+ * Lab2_1.c
  *
  *  Created on:     11.03.2020
  *  Author:         Dinera
