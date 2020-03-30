@@ -18,6 +18,7 @@ void main(void) {
     GpioDataRegs.GPBCLEAR.bit.GPIO50 = 1;   // LED P2 aus
     GpioDataRegs.GPBSET.bit.GPIO51 = 1;     // LED P3 ein
     GpioDataRegs.GPBCLEAR.bit.GPIO55 = 1;   // LED P4 aus
+    GpioCtrlRegs.
 
     while(1)
     {
