@@ -2,7 +2,7 @@
  * Lab1_1.c
  *
  *  Created on:     11.03.2020
- *  Author:         Justus Weinhold
+ *  Author:         Dinera
  *  Description:    Wechselseitiges Blinken der 4 LEDs auf dem Zusatzboard im 0,5 Sekunden Takt
  */
 
