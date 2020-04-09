@@ -7,7 +7,7 @@
  */
 
 #include "DSP28x_Project.h"
-0void main(void) {
+void main(void) {
     unsigned int zaehler = 0;
     unsigned int ausgabe = 0;
     unsigned long i;                        // Timer Zaehlvariable deklarieren
@@ -20,22 +20,22 @@
     while(1)
     {
         // LEDs auschalten
-        GpioDataRegs.GPASET.bit.GPIO17 = 1;
-        GpioDataRegs.GPBSET.all |= 0x8C0000;
+        GpioDataRegs.GPACLEAR.bit.GPIO17 = 1;
+        GpioDataRegs.GPBCLEAR.all |= 0x8C0000;
 
         // Zuweisung ausgabe
         ausgabe = zaehler;
         // LEDs entsprechend der Variable "zaehler" setzen
-        GpioDataRegs.GPACLEAR.bit.GPIO17 = (ausgabe & 0x1); // P1
+        GpioDataRegs.GPASET.bit.GPIO17 = (ausgabe & 0x1); // P1
         ausgabe = (ausgabe >> 1);
-        GpioDataRegs.GPBCLEAR.bit.GPIO50 = (ausgabe & 0x1); // P2
+        GpioDataRegs.GPBSET.bit.GPIO50 = (ausgabe & 0x1); // P2
         ausgabe = (ausgabe >> 1);
-        GpioDataRegs.GPBCLEAR.bit.GPIO51 = (ausgabe & 0x1); // P3
+        GpioDataRegs.GPBSET.bit.GPIO51 = (ausgabe & 0x1); // P3
         ausgabe = (ausgabe >> 1);
-        GpioDataRegs.GPBCLEAR.bit.GPIO55 = (ausgabe & 0x1); // P4
+        GpioDataRegs.GPBSET.bit.GPIO55 = (ausgabe & 0x1); // P4
 
         // ca. 200ms warten
-        for(i=0;i<8923;i++);
+        for(i=0;i<508419;i++);
 
         // zaehler erhoehen
         zaehler++;

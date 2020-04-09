@@ -1,19 +1,26 @@
 /*
- * Lab2_2.c
+ * Lab3_1.c
  *
- *  Created on:     30.03.2020
+ *  Created on:     09.04.2020
  *  Author:         Dinera
- *  Description:    K.I.T.T Lauflicht
+ *  Description:    K.I.T.T Lauflicht (90MHz)
  */
 
 #include "DSP28x_Project.h"
 void main(void) {
-    unsigned int zaehler = 1;
-    unsigned int richtung;
+    /** Variablen Deklaration                */
+    unsigned int zaehler = 1;               // Zaehler-Variable
+    unsigned int richtung;                  // Richtung des Lauflichts
     unsigned long i;                        // Timer Zaehlvariable deklarieren
+
+    /** Initialisierung                     */
+    /* Initialisierung Clock (90MHz)        */
+    InitSysCtrl();
+
+    /* Initialisierung der GPIO Pins        */
     EALLOW;
-    GpioCtrlRegs.GPADIR.bit.GPIO17 = 1;     //Ausgang setzen
-    GpioCtrlRegs.GPBDIR.all |= 0x8C0000;    // Ausgang setzen
+    GpioCtrlRegs.GPADIR.bit.GPIO17 = 1;     // Ausgang setzen (GPIO 17)
+    GpioCtrlRegs.GPBDIR.all |= 0x8C0000;    // Ausgang setzen (GPIO 50, 51, 55)
     SysCtrlRegs.WDCR = 0xE8;                // WD abschalten
     EDIS;
 
@@ -51,8 +58,11 @@ void main(void) {
             zaehler = (zaehler << 1);
         }
 
-        // ca. 200ms warten
-        for(i=0;i<142900;i++);
+        // ca. 200ms warten (10MHz)
+        //for(i=0;i<142853;i++);
+
+        // ca. 200ms warten (90MHz)
+        for(i=0;i<1285709;i++);
 
     }
 }
