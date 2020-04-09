@@ -67,7 +67,7 @@ void main(void) {
         //for(i=0;i<142853;i++);
 
         // ca. 200ms warten (90MHz)
-        for(i=0;i<1285710;i++);
+        for(i=0;i<1285709;i++);
 
         do {                                // Schleife fuer Schalter S1
         // Bediehnung des Watchdogs
