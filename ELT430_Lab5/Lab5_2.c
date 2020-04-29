@@ -11,9 +11,6 @@
 /*** Funktionendeklaration                  */
 __interrupt void mein_CPU_Timer_0_ISR(void);
 
-/*** Variablen definieren               */
-unsigned int schalter;
-
 void main(void)
 {
 
@@ -52,24 +49,21 @@ void main(void)
     /*** Main loop                          */
     while(1)
     {
-        do
-        {
-            // Bediehnung des Watchdogs
-            EALLOW;
-            SysCtrlRegs.WDKEY = 0x55;
-            EDIS;
-        } while (schalter);
-
+        // Bediehnung des Watchdogs (Good Key part 1)
+        EALLOW;
+        SysCtrlRegs.WDKEY = 0x55;
+        EDIS;
     }
 }
 
 __interrupt void mein_CPU_Timer_0_ISR(void)
 {
     /* Variablen Deklaration                */
-    static unsigned int zaehler = 1;               // Zaehler-Variable
+    static unsigned int position = 1;               // LED Position
     static unsigned int richtung;                  // Richtung des Lauflichts
+    unsigned int schalter;                         // Variable fuer den Taster
 
-    // Bediehnung des Watchdogs
+    // Bediehnung des Watchdogs (Good Key part 2)
     EALLOW;
     SysCtrlRegs.WDKEY = 0xAA;
     EDIS;
@@ -83,8 +77,8 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
         GpioDataRegs.GPACLEAR.bit.GPIO17 = 1;
         GpioDataRegs.GPBCLEAR.all |= 0x8C0000;
 
-        // LEDs entsprechend der Variable "zaehler" setze
-        switch (zaehler) {
+        // LEDs entsprechend der Variable "position" setze
+        switch (position) {
         case 1:
             GpioDataRegs.GPASET.bit.GPIO17 = 1; // P1
             richtung = 0;
@@ -105,9 +99,9 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 
         // Shift Operation entsprechend der Richtung
         if (richtung) {
-            zaehler = (zaehler >> 1);
+            position = (position >> 1);
         } else {
-            zaehler = (zaehler << 1);
+            position = (position << 1);
         }
     }
 
