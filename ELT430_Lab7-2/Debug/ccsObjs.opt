@@ -1,0 +1,1 @@
+"./F2806x_GlobalVariableDefs.obj" "./main.obj" "../28069_RAM_lnk.cmd" "../F2806x_Headers_nonBIOS.cmd" -llibc.a 

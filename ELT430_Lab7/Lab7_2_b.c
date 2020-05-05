@@ -7,12 +7,14 @@
  */
 
 #include <DSP28x_Project.h>
+#include <math.h>
 
 void main(void)
 {
   // Variablendeklaration
   float x;
   float y[360];
+  int i;
 
   // WD abschalten
   EALLOW;
@@ -21,8 +23,9 @@ void main(void)
 
   while(1)
     {
-      for (x = 0; x < 359; x++) {
-	  y[x] = sin(x);
+      for (i = 0; i < 360; i++) {
+	  x = ((float)i * (float)3.14159) / 180;
+	  y[i] = sin(x);
       }
     }
 }
