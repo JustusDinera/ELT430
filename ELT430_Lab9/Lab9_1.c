@@ -9,7 +9,8 @@
 #include "DSP28x_Project.h"
 
 /*** Funktionendeklaration                  */
-__interrupt void mein_CPU_Timer_0_ISR(void);
+__interrupt void mein_CPU_Timer_0_ISR(void);    //Interrupt Routune Timer0
+void fn_ePWM1A_Init(void);                      // Initial Funktion fuer PWM A1 (GPIO0)
 
 void main(void)
 {
@@ -118,3 +119,17 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
     PieCtrlRegs.PIEACK.all = 1;
 }
 
+/* Initial Funktion fuer PWM A1 (GPIO0) */
+void fn_ePWM1A_Init(void){
+    EALLOW;
+    GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 1;           //  GPAMUX1 auf ePWM1A setzen
+    EPwm1Regs.TBPRD = 0xAFF5;           // Periode auf 45045 Takte setzen
+    EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
+    EPwm1Regs.TBCTL.bit.HSPCLKDIV = 0;  // High Speed Time-base Clock Prescale Bits auf Wert 1 setzen
+    EPwm1Regs.TBCTL.bit.CTRMODE = 4;    // Zaehlmodus auf Up-down-count mode setzen
+    EPwm1Regs.AQCTLA.bit.ZRO = 10;      // ZRO auf "Set: force EPWMxA output high" setzen
+    EPwm1Regs.AQCTLA.bit.PRD = 1;       // PRD auf "Clear: force EPWMxA output low"
+    EDIS;
+
+
+}
