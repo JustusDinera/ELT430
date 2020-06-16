@@ -1,7 +1,7 @@
 /*
- * Lab9_1.c
+ * Lab13_1.c
  *
- *  Created on:     14.05.2020
+ *  Created on:     16.06.2020
  *  Author:         Dinera
  *  Description:    PWM - Signal unterschiedliche Frequenzen
  */

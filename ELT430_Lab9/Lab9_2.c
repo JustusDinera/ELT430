@@ -1,9 +1,9 @@
 /*
- * Lab9_1.c
+ * Lab9_2.c
  *
- *  Created on:     14.05.2020
+ *  Created on:     02.06.2020
  *  Author:         Dinera
- *  Description:    PWM - Signal unterschiedliche Frequenzen
+ *  Description:    Phasenversetzte PWM Signale
  */
 
 #include "DSP28x_Project.h"
@@ -11,7 +11,8 @@
 /*** Funktionendeklaration                  */
 __interrupt void mein_CPU_Timer_0_ISR(void);    //Interrupt Routune Timer0
 void fn_ePWM1A_Init(void);                      // Initial Funktion fuer PWM A1 (GPIO0)
-
+void fn_ePWM2A_Init(void);                      // Initial Funktion fuer PWM A2 (GPIO2)
+void fn_ePWM3A_Init(void);                      // Initial Funktion fuer PWM A3 (GPIO4)
 void main(void)
 {
     /*** Initialisierung                    */
@@ -34,6 +35,8 @@ void main(void)
 
     /* Initialisierung ePWM1A               */
     fn_ePWM1A_Init();
+    fn_ePWM2A_Init();
+    fn_ePWM3A_Init();
 
     /** Initialisierung kritische Register  */
     /* Initialisierung Watchdog             */
@@ -126,29 +129,59 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 void fn_ePWM1A_Init(void){
     EALLOW;
     GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 1;           //  GPAMUX1 auf ePWM1A setzen
+    EPwm1Regs.TBCTL.bit.SYNCOSEL = 1;             //  Synchronisierungssignal bei TBPRD = 0
     EDIS;
 
-    // // 500Hz
-    //EPwm1Regs.TBPRD = 45026;           // Periode auf 45000 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 1;     // Clockdivider auf den Wert 2 setzen
     // // 1kHz
-    //EPwm1Regs.TBPRD = 45026;           // Periode auf 45000 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 2kHz
-    //EPwm1Regs.TBPRD = 22500;           // Periode auf 22500 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 5kHz
-    EPwm1Regs.TBPRD = 9000;           // Periode auf 9000 Takte setzen
+    EPwm1Regs.TBPRD = 45026;           // Periode auf 45026 Takte setzen
     EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 20kHz
-    //EPwm1Regs.TBPRD = 2250;           // Periode auf 2250 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 50kHz
-    //EPwm1Regs.TBPRD = 900;           // Periode auf 900 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
+
 
     EPwm1Regs.TBCTL.bit.HSPCLKDIV = 0;  // High Speed Time-base Clock Prescale Bits auf Wert 1 setzen
     EPwm1Regs.TBCTL.bit.CTRMODE = 2;    // Zaehlmodus auf Up-down-count mode setzen
     EPwm1Regs.AQCTLA.bit.ZRO = 2;      // ZRO auf "Set: force EPWMxA output high" setzen
     EPwm1Regs.AQCTLA.bit.PRD = 1;       // PRD auf "Clear: force EPWMxA output low" setzen
+}
+
+/* Initial Funktion fuer PWM A2 (GPIO2) */
+void fn_ePWM2A_Init(void){
+    EALLOW;
+    GpioCtrlRegs.GPAMUX1.bit.GPIO2 = 1;           //  GPAMUX1 auf ePWM2A setzen
+    EPwm2Regs.TBCTL.bit.SYNCOSEL = 0;             //  Synchronisierungssignal bei EPWM1SYNC = 0
+    EPwm2Regs.TBCTL.bit.PHSEN = 1;             //  Synchronisierungssignal bei TBPRD = 0
+    EDIS;
+
+    EPwm2Regs.TBPHS.half.TBPHS = 30016;          // Phasenversatz einstellen (120Grad)
+
+    // // 1kHz
+    EPwm2Regs.TBPRD = 45026;           // Periode auf 45026 Takte setzen
+    EPwm2Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
+
+
+    EPwm2Regs.TBCTL.bit.HSPCLKDIV = 0;  // High Speed Time-base Clock Prescale Bits auf Wert 1 setzen
+    EPwm2Regs.TBCTL.bit.CTRMODE = 2;    // Zaehlmodus auf Up-down-count mode setzen
+    EPwm2Regs.AQCTLA.bit.ZRO = 2;      // ZRO auf "Set: force EPWMxA output high" setzen
+    EPwm2Regs.AQCTLA.bit.PRD = 1;       // PRD auf "Clear: force EPWMxA output low" setzen
+}
+
+/* Initial Funktion fuer PWM A3 (GPIO4) */
+void fn_ePWM3A_Init(void){
+    EALLOW;
+    GpioCtrlRegs.GPAMUX1.bit.GPIO4 = 1;           //  GPAMUX1 auf ePWM3A setzen
+    EPwm3Regs.TBCTL.bit.SYNCOSEL = 3;             //  Synchronisierungssignal bei EPWM1SYNC = 0
+    EPwm3Regs.TBCTL.bit.PHSEN = 1;             //  Synchronisierungssignal bei TBPRD = 0
+    EDIS;
+
+    EPwm3Regs.TBPHS.half.TBPHS = 60032;          // Phasenversatz einstellen (240Grad)
+
+
+    // // 1kHz
+    EPwm3Regs.TBPRD = 45026;           // Periode auf 45026 Takte setzen
+    EPwm3Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
+
+
+    EPwm3Regs.TBCTL.bit.HSPCLKDIV = 0;  // High Speed Time-base Clock Prescale Bits auf Wert 1 setzen
+    EPwm3Regs.TBCTL.bit.CTRMODE = 2;    // Zaehlmodus auf Up-down-count mode setzen
+    EPwm3Regs.AQCTLA.bit.ZRO = 2;      // ZRO auf "Set: force EPWMxA output high" setzen
+    EPwm3Regs.AQCTLA.bit.PRD = 1;       // PRD auf "Clear: force EPWMxA output low" setzen
 }

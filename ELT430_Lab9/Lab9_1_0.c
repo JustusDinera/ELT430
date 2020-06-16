@@ -3,7 +3,7 @@
  *
  *  Created on:     14.05.2020
  *  Author:         Dinera
- *  Description:    PWM - Signal unterschiedliche Frequenzen
+ *  Description:    1 KHz PWM - Signal
  */
 
 #include "DSP28x_Project.h"
@@ -127,26 +127,8 @@ void fn_ePWM1A_Init(void){
     EALLOW;
     GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 1;           //  GPAMUX1 auf ePWM1A setzen
     EDIS;
-
-    // // 500Hz
-    //EPwm1Regs.TBPRD = 45026;           // Periode auf 45000 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 1;     // Clockdivider auf den Wert 2 setzen
-    // // 1kHz
-    //EPwm1Regs.TBPRD = 45026;           // Periode auf 45000 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 2kHz
-    //EPwm1Regs.TBPRD = 22500;           // Periode auf 22500 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 5kHz
-    EPwm1Regs.TBPRD = 9000;           // Periode auf 9000 Takte setzen
+    EPwm1Regs.TBPRD = 0xAFF5;           // Periode auf 45045 Takte setzen
     EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 20kHz
-    //EPwm1Regs.TBPRD = 2250;           // Periode auf 2250 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-    // // 50kHz
-    //EPwm1Regs.TBPRD = 900;           // Periode auf 900 Takte setzen
-    //EPwm1Regs.TBCTL.bit.CLKDIV = 0;     // Clockdivider auf den Wert 1 setzen
-
     EPwm1Regs.TBCTL.bit.HSPCLKDIV = 0;  // High Speed Time-base Clock Prescale Bits auf Wert 1 setzen
     EPwm1Regs.TBCTL.bit.CTRMODE = 2;    // Zaehlmodus auf Up-down-count mode setzen
     EPwm1Regs.AQCTLA.bit.ZRO = 2;      // ZRO auf "Set: force EPWMxA output high" setzen
