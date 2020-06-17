@@ -1,15 +1,23 @@
 /*
- * Lab13_1A.c
+ * Lab13_1B.c
  *
  *  Created on:     16.06.2020
  *  Author:         Dinera
- *  Description:    PWM - Signal Messung
+ *  Description:    PWM - Signal Messung mit Interrupt
  */
 
 #include "DSP28x_Project.h"
 
+/*** Globale Variablendeklaration           */
+long PWM1A_Periode, PWM1A_Pulsdauer;            // Variablen zur Messung der Periode und Pulsdauer des PWM1A Signals
+float PWM1A_Frequenz, PWM1A_Tastverhaeltnis;    // Variablen zur Berechnug der Frequenz und des Tastveraeltnises
+
+
+
+
 /*** Funktionendeklaration                  */
-__interrupt void mein_CPU_Timer_0_ISR(void);    //Interrupt Routune Timer0
+__interrupt void mein_CPU_Timer_0_ISR(void);    // Interrupt Routine Timer0
+__interrupt void mein_eCAP1_ISR(void);          // Interrupt Routine eCAP1
 void fn_ePWM1A_Init(void);                      // Initial Funktion fuer PWM A1 (GPIO0)
 void fn_eCAP1_Init(void);                       // Initial Funktion fuer eCAP1  (GPIO24)
 
@@ -42,20 +50,25 @@ void main(void)
     /** Initialisierung kritische Register  */
     /* Initialisierung Watchdog             */
     EALLOW;                                 // Sperre von kritischen Registern entriegeln
-    SysCtrlRegs.WDCR = 0x28;                // Watchdog einschalten
+    SysCtrlRegs.WDCR = 0x2D;                // Watchdog einschalten und den Prescaler auf 16 setzen
 
     /* Initialisierung der GPIO Pins        */
     GpioCtrlRegs.GPADIR.bit.GPIO12 = 0;     // Eingang setzen (GPIO 12 [S1])
     GpioCtrlRegs.GPADIR.bit.GPIO17 = 1;     // Ausgang setzen (GPIO 17 [P1])
     GpioCtrlRegs.GPBDIR.all |= 0x8C0000;    // Ausgang setzen (GPIO 50 [P2], 51 [P3], 55 [P4])
 
-    /* Initialisierung CPU-Interrupts fuer Timer0  */
-    PieVectTable.TINT0 = &mein_CPU_Timer_0_ISR; // Eigene ISR aufrufen
+    PieVectTable.ECAP1_INT = &mein_eCAP1_ISR;   // Eigene eCAP1 ISR in ISR Vektor Tabelle eintragen
+    PieVectTable.TINT0 = &mein_CPU_Timer_0_ISR; // Eigene Timer0 ISR in ISR Vektor Tabelle eintragen
     EDIS;                                   // Sperre bei kritischen Registern setzen.
     asm("   CLRC INTM");                    // Freigabe der Interrupts
+
+    /* Initialisierung CPU-Interrupts fuer Timer0  */
     IER |= 1;                               // INT1 freigeben
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;      // Interrupt-Leitung 7 freigeben
-    PieVectTable.TINT0 = &mein_CPU_Timer_0_ISR; // Eigene ISR aufrufen
+
+    /* Initialisierung eCAP-Interrupts fuer eCAP1 */
+    IER |= (1 << 3);                        // INT4 freigeben
+    PieCtrlRegs.PIEIER4.bit.INTx1 = 1;      // Interrupt-Leitung 1 freigeben
 
     /*   Low Power Mode einstellen              */
     SysCtrlRegs.LPMCR0.bit.LPM = 0; // IDLE Mode aktivieren
@@ -70,6 +83,12 @@ void main(void)
         EALLOW;
         SysCtrlRegs.WDKEY = 0xAA;
         EDIS;
+
+        // Berechnung der PWM1A_Frequenz (bei 90MHz CPU-Taktfrequenz)
+        PWM1A_Frequenz = 1000000000/(PWM1A_Periode*11.11);
+
+        // Berechnung des PWM1A_Tastverhaeltnises in Prozent
+        PWM1A_Tastverhaeltnis = PWM1A_Pulsdauer*100.0/PWM1A_Periode;
     }
 }
 
@@ -124,6 +143,17 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 
     // Freigabe Interrupt (Acknowledge Flag)
     PieCtrlRegs.PIEACK.all = 1;
+}
+
+/* Innterrupt Routine fuer eCAP1 */
+void mein_eCAP1_ISR(void){
+    PWM1A_Periode = (long)(ECap1Regs.CAP4 - ECap1Regs.CAP2);            // Berechnung der PWM Periodendauer (Takte)
+    PWM1A_Pulsdauer = ECap1Regs.CAP2 - ECap1Regs.CAP1;                  // Berechnung der Pulsbreite (Takte)
+
+    /* loeschen der Inbrruptflags */
+    ECap1Regs.ECCLR.bit.INT= 1; // clear Interrupt Flag of eCAP1
+    ECap1Regs.ECCLR.bit.CEVT4= 1; // clear event 4 interrupt flag
+    PieCtrlRegs.PIEACK.all= 8; // re-enable interrupt PIE-group 4
 }
 
 /* Initial Funktion fuer PWM A1 (GPIO0) */

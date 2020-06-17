@@ -43,7 +43,11 @@ void main(void)
     /** Initialisierung kritische Register  */
     /* Initialisierung Watchdog             */
     EALLOW;                                 // Sperre von kritischen Registern entriegeln
-    SysCtrlRegs.WDCR = 0x2D;                // Watchdog einschalten und den Prescaler auf 16 setzen
+
+    // WD einstellen
+    SysCtrlRegs.WDCNTR = 17;                 // WD schlaegt nach
+
+            // Watchdog einschalten und den Prescaler auf 16 setzen
 
     /* Initialisierung der GPIO Pins        */
     GpioCtrlRegs.GPADIR.bit.GPIO12 = 0;     // Eingang setzen (GPIO 12 [S1])
