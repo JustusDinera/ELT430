@@ -67,13 +67,14 @@ void main(void)
     /*** Main loop                          */
     while(1)
     {
-        // IDLE Mode aktivieren
-        asm("   IDLE");
-
         // Bediehnung des Watchdogs (Good Key part 1)
         EALLOW;
         SysCtrlRegs.WDKEY = 0x55;
         EDIS;
+
+        // IDLE Mode aktivieren
+        asm("   IDLE");
+
     }
 }
 
