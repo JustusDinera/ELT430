@@ -45,12 +45,12 @@ void main(void)
     AdcRegs.INTSEL1N2.bit.INT1CONT = 1;             // Interrupt bei jedem EOC Signal
     AdcRegs.INTSEL1N2.bit.INT1E = 1;                // Interrupt ADCINT1 freigeben
     AdcRegs.INTSEL1N2.bit.INT1SEL = 0;              // EOC0 triggert ADCINT1
-    IER |= (1 << 9);                                // INT10 freigeben
-    PieCtrlRegs.PIEIER10.bit.INTx1 = 1;             // Interrupt 10 Leitung 1 freigeben (ADCINT1)
+    IER |= 1;                                       // INT1 freigeben
+    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;              // Interrupt 1 Leitung 1 freigeben (ADCINT1)
     PieVectTable.ADCINT1 = &my_ADCINT1_ISR;         // Eigene ADC-ISR in Vektortabelle eintragen
 
     /* Initialisierung Watchdog             */
-    SysCtrlRegs.WDCR = 0x28;                // WD einschalten (PS = 32)
+    SysCtrlRegs.WDCR = 0x28;                // WD einschalten (PS = 1)
 
     /* Initialisierung der GPIO Pins        */
     GpioCtrlRegs.GPADIR.bit.GPIO12 = 0;     // Eingang setzen (GPIO 12 [S1])
@@ -67,14 +67,13 @@ void main(void)
     /*** Main loop                          */
     while(1)
     {
+        // IDLE Mode aktivieren
+        asm("   IDLE");
+
         // Bediehnung des Watchdogs (Good Key part 1)
         EALLOW;
         SysCtrlRegs.WDKEY = 0x55;
         EDIS;
-
-        // IDLE Mode aktivieren
-        asm("   IDLE");
-
     }
 }
 
@@ -97,13 +96,13 @@ __interrupt void my_ADCINT1_ISR(void){
     GpioDataRegs.GPBCLEAR.all |= 0x8C0000;
 
     // Auswerten des ADC Ergebnisregisters (Potentiometer)
-    if (poti_wert > 0) {
+    if (poti_wert > 20) {
         GpioDataRegs.GPBSET.bit.GPIO55 = 1; // P4
-        if (poti_wert < 512) {
+        if (poti_wert > 1000) {
             GpioDataRegs.GPBSET.bit.GPIO51 = 1; // P3
-            if (poti_wert < 1024) {
+            if (poti_wert > 2000) {
                 GpioDataRegs.GPBSET.bit.GPIO50 = 1; // P2
-                if (poti_wert > 1536) {
+                if (poti_wert > 3000 ) {
                     GpioDataRegs.GPASET.bit.GPIO17 = 1; // P1
                 }
             }
