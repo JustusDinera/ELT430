@@ -1,9 +1,9 @@
 /*
- * Lab15_1.c
+ * Lab15_2.c
  *
- *  Created on:     17.06.2020
+ *  Created on:     25.06.2020
  *  Author:         Dinera
- *  Description:    Messung der Chip-Temperatur
+ *  Description:    Messung der Chip-Temperatur bei 10 MHz
  */
 
 #include "DSP28x_Project.h"
@@ -12,10 +12,15 @@
 /*** Makrodefinition                        */
 #define getTempSlope() (*(int (*)(void))0x3D7E82)()
 #define getTempOffset() (*(int (*)(void))0x3D7E85)()
-#define MAX_MESSWERTE 1000                   // Makro um die maximale Anzahl der Messwerte zu bestimmen
+#define MAX_MESSWERTE 1600                   // Makro um die maximale Anzahl der Messwerte zu bestimmen
 
 /** Benutzer Makros                         */
 #define IDLE_AN                             // Idle Mode aktivieren
+//#define CPU_5MHZ                            // CPU CLOCK auf 5MHz stellen
+//#define CPU_10MHZ                           // CPU CLOCK auf 10MHz stellen
+//#define CPU_20MHZ                           // CPU CLOCK auf 20MHz stellen
+//#define CPU_40MHZ                           // CPU CLOCK auf 40MHz stellen
+#define CPU_60MHZ                           // CPU CLOCK auf 60MHz stellen
 
 /*** Variablendeklaration                   */
 unsigned int Temperatur,                    // Globale Variable fuer die Anzeige der Temperatur
@@ -41,6 +46,27 @@ void main(void)
     /* Initialisierung Clock (90MHz)        */
     InitSysCtrl();
 
+    /* Einstellen der CPU Clock auf 5 MHz */
+#ifdef CPU_5MHZ
+    InitPll(1, 1);
+#endif
+    /* Einstellen der CPU Clock auf 10 MHz */
+#ifdef CPU_10MHZ
+    InitPll(1, 2);
+#endif
+    /* Einstellen der CPU Clock auf 20 MHz */
+#ifdef CPU_20MHZ
+    InitPll(1, 3);
+#endif
+    /* Einstellen der CPU Clock auf 40 MHz */
+#ifdef CPU_40MHZ
+    InitPll(2, 3);
+#endif
+    /* Einstellen der CPU Clock auf 60 MHz */
+#ifdef CPU_60MHZ
+    InitPll(3, 3);
+#endif
+
     /* Performence optimierung fuer FLASH */
     InitFlash();
 
@@ -51,8 +77,27 @@ void main(void)
     /* Initialisierung der CPU Timer        */
     InitCpuTimers();
 
-    /* Initialisierung CPU-Timer0 bei 90MHz CPU-Takt auf 100ms Intervall  */
-    ConfigCpuTimer(&CpuTimer0, 90, 100000);
+    /* Initialisierung CPU-Timer0 bei 5MHz CPU-Takt auf 100ms Intervall  */
+#ifdef CPU_5MHZ
+    ConfigCpuTimer(&CpuTimer0, 5, 100000);
+#endif
+    /* Initialisierung CPU-Timer0 bei 10MHz CPU-Takt auf 100ms Intervall  */
+#ifdef CPU_10MHZ
+    ConfigCpuTimer(&CpuTimer0, 10, 100000);
+#endif
+    /* Initialisierung CPU-Timer0 bei 20MHz CPU-Takt auf 100ms Intervall  */
+#ifdef CPU_20MHZ
+    ConfigCpuTimer(&CpuTimer0, 20, 100000);
+#endif
+    /* Initialisierung CPU-Timer0 bei 40MHz CPU-Takt auf 100ms Intervall  */
+#ifdef CPU_40MHZ
+    ConfigCpuTimer(&CpuTimer0, 40, 100000);
+#endif
+    /* Initialisierung CPU-Timer0 bei 60MHz CPU-Takt auf 100ms Intervall  */
+#ifdef CPU_60MHZ
+    ConfigCpuTimer(&CpuTimer0, 60, 100000);
+#endif
+
 
     CpuTimer0Regs.TCR.bit.TSS = 0;          // Starten CPU Timer0
 
@@ -77,12 +122,13 @@ void main(void)
     PieVectTable.ADCINT1 = &my_ADCINT1_ISR;         // Eigene ADC-ISR in Vektortabelle eintragen
 
     /* Initialisierung Watchdog             */
-    SysCtrlRegs.WDCR = 0x2C;                // WD einschalten und Prescaler setzen
+    SysCtrlRegs.WDCR = 0x2E;                // WD einschalten (PS = 1)
 
     /* Initialisierung der GPIO Pins        */
     GpioCtrlRegs.GPADIR.bit.GPIO12 = 0;     // Eingang setzen (GPIO 12 [S1])
     GpioCtrlRegs.GPADIR.bit.GPIO17 = 1;     // Ausgang setzen (GPIO 17 [P1])
     GpioCtrlRegs.GPBDIR.all |= 0x8C0000;    // Ausgang setzen (GPIO 50 [P2], 51 [P3], 55 [P4])
+    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 3;    // Clock Signal auf GPIO18 legen
 
     /* Initialisierung Interrupts           */
     EDIS;                                   // Sperre bei kritischen Registern setzen.
@@ -103,6 +149,7 @@ void main(void)
 #ifdef IDLE_AN
         asm("   IDLE");
 #endif
+
     }
 }
 

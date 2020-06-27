@@ -1,42 +1,21 @@
 /*
- * Lab15_1.c
+ * Lab16_1.c
  *
- *  Created on:     17.06.2020
+ *  Created on:     25.06.2020
  *  Author:         Dinera
- *  Description:    Messung der Chip-Temperatur
+ *  Description:    PWM Erzeugung und ADC Messung
  */
 
 #include "DSP28x_Project.h"
-#include "IQmathLib.h"
-
-/*** Makrodefinition                        */
-#define getTempSlope() (*(int (*)(void))0x3D7E82)()
-#define getTempOffset() (*(int (*)(void))0x3D7E85)()
-#define MAX_MESSWERTE 1000                   // Makro um die maximale Anzahl der Messwerte zu bestimmen
-
-/** Benutzer Makros                         */
-#define IDLE_AN                             // Idle Mode aktivieren
-
-/*** Variablendeklaration                   */
-unsigned int Temperatur,                    // Globale Variable fuer die Anzeige der Temperatur
-             offset,                        // Temperatur Offset
-             slope,                         // Anstieg der Geraden fuer die Temperatur
-
-             index_verlauf= 0;              // Zaehlvariable fuer Darstellung Temp in Zeit
-float verlauf_temp[MAX_MESSWERTE],          // Variable um den Temperaturverlauf darzustellen
-      CPU_Temperatur;                       // Momentanwert der CPU Temperatur
 
 /*** Funktionendeklaration                  */
 __interrupt void my_ADCINT1_ISR(void);      //ADC Interrupt Routine
+__interrupt void mein_CPU_Timer_0_ISR(void);    //Interrupt Routune Timer0
 
 void main(void)
 {
     /*** Initialisierung                    */
     memcpy(&RamfuncsRunStart, &RamfuncsLoadStart, (Uint32)&RamfuncsLoadSize); // kopieren des Programms in den RAM zur Laufzeit und schnellere Zufriffszeiten zu nutzen.
-
-    /* Variablendefinition                  */
-    offset = getTempOffset();               // Offset-Wert von Adresse 0x3D7E85 in Variable speichern
-    slope = getTempSlope();                 // Slope-Wert von Adresse 0x3D7E82 in Variable speichern
 
     /* Initialisierung Clock (90MHz)        */
     InitSysCtrl();
@@ -48,13 +27,10 @@ void main(void)
     InitPieCtrl();
     InitPieVectTable();
 
-    /* Initialisierung der CPU Timer        */
+    /* Initialisierung CPU-Timer0 (10Hz) bei 90MHz CPU-Takt auf 100ms Intervall  */
     InitCpuTimers();
-
-    /* Initialisierung CPU-Timer0 bei 90MHz CPU-Takt auf 100ms Intervall  */
     ConfigCpuTimer(&CpuTimer0, 90, 100000);
-
-    CpuTimer0Regs.TCR.bit.TSS = 0;          // Starten CPU Timer0
+    CpuTimer0Regs.TCR.bit.TSS = 0;
 
     /* Initialisieren des ADC */
     InitAdc();
@@ -65,10 +41,8 @@ void main(void)
     /* ADC einstellen */
     AdcRegs.ADCSAMPLEMODE.bit.SIMULEN0 = 0;         // Single Sampe Mode an SOC0 und SOC1
     AdcRegs.ADCSOC0CTL.bit.TRIGSEL = 1;             // CPU Timer0 als SOC0-Trigger eingestellt
-    AdcRegs.ADCSOC0CTL.bit.CHSEL = 5;               // ADCINA5 als Analogeingang setzen (Temperatursensor)
+    AdcRegs.ADCSOC0CTL.bit.CHSEL = 7;               // ADCINA7 als Analogeingang setzen
     AdcRegs.ADCSOC0CTL.bit.ACQPS = 6;               // Abtastfenster auf 7 Takte gestellt
-    AdcRegs.ADCCTL1.bit.TEMPCONV = 1;               // Temperatursensor einschalten
-
     AdcRegs.INTSEL1N2.bit.INT1CONT = 1;             // Interrupt bei jedem EOC Signal
     AdcRegs.INTSEL1N2.bit.INT1E = 1;                // Interrupt ADCINT1 freigeben
     AdcRegs.INTSEL1N2.bit.INT1SEL = 0;              // EOC0 triggert ADCINT1
@@ -77,12 +51,15 @@ void main(void)
     PieVectTable.ADCINT1 = &my_ADCINT1_ISR;         // Eigene ADC-ISR in Vektortabelle eintragen
 
     /* Initialisierung Watchdog             */
-    SysCtrlRegs.WDCR = 0x2C;                // WD einschalten und Prescaler setzen
+    SysCtrlRegs.WDCR = 0x28;                // WD einschalten (PS = 1)
 
     /* Initialisierung der GPIO Pins        */
     GpioCtrlRegs.GPADIR.bit.GPIO12 = 0;     // Eingang setzen (GPIO 12 [S1])
     GpioCtrlRegs.GPADIR.bit.GPIO17 = 1;     // Ausgang setzen (GPIO 17 [P1])
     GpioCtrlRegs.GPBDIR.all |= 0x8C0000;    // Ausgang setzen (GPIO 50 [P2], 51 [P3], 55 [P4])
+
+    /* Initialisierung CPU-Interrupts fuer Timer0  */
+    PieVectTable.TINT0 = &mein_CPU_Timer_0_ISR; // Eigene ISR aufrufen (Lauflicht)
 
     /* Initialisierung Interrupts           */
     EDIS;                                   // Sperre bei kritischen Registern setzen.
@@ -94,44 +71,32 @@ void main(void)
     /*** Main loop                          */
     while(1)
     {
+        // IDLE Mode aktivieren
+        asm("   IDLE");
+
         // Bediehnung des Watchdogs (Good Key part 1)
         EALLOW;
         SysCtrlRegs.WDKEY = 0x55;
         EDIS;
-
-        // IDLE Mode aktivieren wenn IDLE_An definiert wurde
-#ifdef IDLE_AN
-        asm("   IDLE");
-#endif
     }
 }
 
-/* ADC Interrupt Routine */
-__interrupt void my_ADCINT1_ISR(void){
+/* Interrupt Timer0 (Lauflicht)
+__interrupt void mein_CPU_Timer_0_ISR(void)
+{
     /* Variablen Deklaration                */
     static unsigned int position = 1;               // LED Position
     static unsigned int richtung;                  // Richtung des Lauflichts
-    unsigned int schalter;                         // Variable fuer den Taster
+    static unsigned int schalter;                   // Variable fuer Taster
 
-    // Bediehnung des Watchdogs (Good Key part 1)
+    // Bediehnung des Watchdogs (Good Key part 2)
     EALLOW;
-    SysCtrlRegs.WDKEY = 0xAA;
+    SysCtrlRegs.WDKEY = 0x55;
     EDIS;
-
-    // Auslesn des ADC Ergebnisregisters (Temperatur)
-    Temperatur = AdcResult.ADCRESULT0;
-    CPU_Temperatur =  _IQ15toF(slope)*(Temperatur - offset);
-    // Zur Darstellung Temp ueber Zeit
-    if (index_verlauf < MAX_MESSWERTE) {
-        index_verlauf++;
-        verlauf_temp[index_verlauf] = CPU_Temperatur;
-    }
-
 
     // Schalter S1 auslesen
     schalter = GpioDataRegs.GPADAT.bit.GPIO12;
 
-    // Pruefung, ob der Schalter S1 geschlossen ist
     if (schalter)
     {
         // LEDs auschalten
@@ -164,6 +129,23 @@ __interrupt void my_ADCINT1_ISR(void){
         } else {
             position = (position << 1);
         }
+    }
+
+    // Freigabe Interrupt (Acknowledge Flag)
+    PieCtrlRegs.PIEACK.all = 1;
+}
+
+
+/* ADC Interrupt Routine */
+__interrupt void my_ADCINT1_ISR(void){
+    // Variablen deklaration
+
+    // Bediehnung des Watchdogs (Good Key part 1)
+    EALLOW;
+    SysCtrlRegs.WDKEY = 0xAA;
+    EDIS;
+
+
     }
 
     // Interruptflag loeschen
