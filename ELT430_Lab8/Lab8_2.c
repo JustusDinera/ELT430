@@ -12,9 +12,9 @@
 unsigned int XINT1_Takte;
 
 /*** Funktionendeklaration                  */
-__interrupt void mein_CPU_Timer_0_ISR(void);
-__interrupt void mein_Watchdog_ISR(void);
-__interrupt void meine_XINT1_ISR(void);
+__interrupt void mein_CPU_Timer_0_ISR(void);    // Timer0 Routine
+__interrupt void mein_Watchdog_ISR(void);       // WD Routine
+__interrupt void meine_XINT1_ISR(void);         // Externes Interrupt (Schalter)
 
 
 void main(void)
@@ -39,8 +39,8 @@ void main(void)
     CpuTimer0Regs.TCR.bit.TSS = 0;
 
     /** Initialisierung kritische Register  	*/
-    /* Initialisierung Watchdog             	*/
     EALLOW;                                 	// Sperre von kritischen Registern entriegeln
+    /* Initialisierung Watchdog             	*/
     /* Watchdog*/
     SysCtrlRegs.WDCR = 0x2D;                	// Watchdog einschalten und den Prescaler auf 16 setzen
     SysCtrlRegs.SCSR |= 2;		    	// Watchdog Interrupt einschalten
@@ -63,10 +63,7 @@ void main(void)
     PieCtrlRegs.PIEIER1.bit.INTx4 = 1; 		// Interrupt-Leitung 4 freigeben (XINT1)
     PieVectTable.XINT1 = &meine_XINT1_ISR;  	// Eigene ISR aufrufen (WD)
 
-    EDIS;                                  	// Sperre bei kritischen Registern setzen.
 
-    asm("   CLRC INTM");                    	// Freigabe der Interrupts
-    IER |= 1;                               	// INT1 freigeben
 
 
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;          // Interrupt-Leitung 7 freigeben (Timer0)
@@ -75,7 +72,10 @@ void main(void)
     PieCtrlRegs.PIEIER1.bit.INTx8 = 1; 		// Interrupt-Leitung 8 freigeben (WD)
     PieVectTable.WAKEINT = &mein_Watchdog_ISR;  // Eigene ISR aufrufen (WD)
 
+    EDIS;                                  	// Sperre bei kritischen Registern setzen.
 
+    asm("   CLRC INTM");                    	// Freigabe der Interrupts
+    IER |= 1;                               	// INT1 freigeben
 
     /*   Low Power Mode einstellen              */
     SysCtrlRegs.LPMCR0.bit.LPM = 0; // IDLE Mode aktivieren
@@ -153,7 +153,7 @@ __interrupt void mein_Watchdog_ISR(void)
 __interrupt void meine_XINT1_ISR(void)
 {
   GpioDataRegs.GPATOGGLE.bit.GPIO0 = 1;		// Ausgang GPIO 0 schalten.
-  XINT1_Takte = XIntruptRegs.XINT1CR.all;
+  XINT1_Takte = XIntruptRegs.XINT1CTR;      // Anzahl der Takte messen, die seit dem Interrupt vergangen sind
 
   // Freigabe Interrupt (Acknowledge Flag)
   PieCtrlRegs.PIEACK.bit.ACK1 = 1;

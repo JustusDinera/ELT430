@@ -1,30 +1,34 @@
 /*
- * Lab17_2.c
+ * Lab18_1.c
  *
  *  Created on:     29.06.2020
  *  Author:         Dinera
- *  Description:    Saegezahnspannungen an den Ausgaengen OUTA und OUTB und Messung dieser an den Eingaengen ADCINA0/ADCINA1
+ *  Description:    Sinus-Spannungen an den Ausgaengen OUTA und OUTB und Messung dieser an den Eingaengen ADCINA0/ADCINA1 rueckkoppeln
  */
 
 #include "DSP28x_Project.h"
+#include "math.h"
+
+/*** Makro-Definition                       */
+#define KOEFFIZIENT (double)((double)3.14159265/180) // Koeffizient fuer die Berechnung des Sinus im Gradmass. Multiplikation in der Funktion beschleunigt die Abarbeitung.
 
 /*** Globale Variablen Deklaration          */
-unsigned int OutA[1024],                    // Variable fuer Messung von Ausgang OutA
-             OutB[1024];                    // Variable fuer Messung von Ausgang OutB
+unsigned int OutA[360],                     // Variable fuer Messung von Ausgang OutA
+             OutB[360];                     // Variable fuer Messung von Ausgang OutB
 
 /*** Funktionendeklaration                  */
 __interrupt void mein_CPU_Timer_0_ISR(void);    // Timoer0 Interrupt
-__interrupt void my_ADCINT1_ISR(void);          //ADC Interrupt
-
+__interrupt void my_ADCINT1_ISR(void);          // ADC Interrupt
+int spannung(float winkel_deg, float phasenverschiebung);   // Berechnung Sinus-Spannung: Winkel im Bogenmass und die Phasenverschiebung im Gradmass
 
 void main(void)
 {
     /*** Initialisierung                    */
-
     memcpy(&RamfuncsRunStart, &RamfuncsLoadStart, (Uint32)&RamfuncsLoadSize); // kopieren des Programms in den RAM zur Laufzeit um schnellere Zufriffszeiten zu nutzen.
 
     /* Initialisierung Clock (90MHz)        */
     InitSysCtrl();
+
 
     /* Performence optimierung fuer FLASH */
     InitFlash();
@@ -57,7 +61,6 @@ void main(void)
     GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 1;    // 1 = SPICLKA
     GpioDataRegs.GPASET.bit.GPIO22 = 1;     // GPIO22 ('SPI-CS) passiv geschaltet
     GpioCtrlRegs.GPADIR.bit.GPIO22 = 1;     // GPIO22 ('SPI-CS) auf Ausgang stellen
-
 
     // INT1 freigeben
     IER |= 1;
@@ -125,8 +128,7 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
     static unsigned int richtung;                   // Richtung des Lauflichts
     static unsigned int schalter;                   // Variable fuer Taster
     static unsigned int LED_durchlauf_zaehler = 0;  // Zaehlvariable fuer LED Lauflicht
-    static int Spannung_A = 1023;                   //
-    static int Spannung_B = 0;                      //
+    static float Winkel = 0;                     //
     unsigned int msg;                               // Variable deklarieren fuer Nachricht 1 und 2, sowie RX Buffer leeren
 
 
@@ -181,9 +183,12 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 
 
     /* SPI Nachricht an DAC                         */
+    //Berechnung der Spannungen
+
+
     // Nachricht 1
     msg =
-            ((Spannung_B & 0x3FF)<<2)|       // Spannung B in die Datenbits 11 - 2
+            ((spannung(Winkel, 0) & 0x3FF)<<2)|       // Sinus-Spannung ohne Phasenverschiebung in die Datenbits 11 - 2
             (1<<14)|                        // Speed controll auf "fast mode" stellen
             (1<<12);                        // Nachricht in den Buffer schieben
     GpioDataRegs.GPACLEAR.bit.GPIO22 = 1;   // aktivieren von /CS
@@ -195,7 +200,7 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 
     // Nachricht 2
     msg =
-            ((Spannung_A & 0x3FF)<<2)|      // Spannung A in die Datenbits 11 - 2
+            ((spannung(Winkel, 180) & 0x3FF)<<2)|      // Sinus-Spannung mit einer Phasenverschiebung von 180 Grad in die Datenbits 11 - 2
             (1<<14)|                        // Speed controll auf "fast mode" stellen
             (1<<15);                         // Die Nachricht in den Ausgang OUTA und den TX Buffer in den Ausgang B Schieben
     GpioDataRegs.GPACLEAR.bit.GPIO22 = 1;   // aktivieren von /CS
@@ -205,13 +210,10 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
     GpioDataRegs.GPASET.bit.GPIO22 = 1;     // deaktivieren von /CS
     msg = SpiaRegs.SPIRXBUF;                // SPI Vorgang abschliessen (Den Eingangsbuffer durch lesen freigeben)
 
-    // Anpassung der Spannungen
-    if (Spannung_A > 0) {
-        Spannung_A--;                       // Spannung A dekrementieren
-        Spannung_B++;                       // Spannung B inkrementieren
-    } else {
-        Spannung_A = 1023;                  // Spannung A auf Ausgangswert zureucksetzen
-        Spannung_B = 0;                     // Spannung B auf Ausgangswert zureucksetzen
+    // Anpassung des Winkels
+    Winkel++;                           // Winkel inkrementieren
+    if (Winkel > 359) {
+        Winkel = 0;                     // Winkel auf Ausgangswert zureucksetzen (0 Grad)
     }
 
     // Freigabe Interrupt (Acknowledge Flag)
@@ -229,7 +231,7 @@ __interrupt void my_ADCINT1_ISR(void){
     *OutBPtr = AdcResult.ADCRESULT1;            // Auslesen  der AdcResult Register 1 (OUTB)
     OutAPtr++;                                  // Erhoehen um in naechsten Wert in Feld OutA zugreifen zu koennen.
     OutBPtr++;                                  // Erhoehen um in naechsten Wert in Feld OutB zugreifen zu koennen.
-    if (OutAPtr > &OutA[1023]){                 // Pointer auf die ersten Eintraege der Felder zuruecksetzen
+    if (OutAPtr > &OutA[359]){                 // Pointer auf die ersten Eintraege der Felder zuruecksetzen
         OutAPtr = OutA;
         OutBPtr = OutB;
     }
@@ -240,3 +242,8 @@ __interrupt void my_ADCINT1_ISR(void){
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
+// Sinus-Spannungsberechnung
+int spannung(float winkel_deg, float phasenverschiebung){   // Winkel im Bogenmass und die Phasenverschiebung im Gradmass
+    double winkel_rad = ((winkel_deg + phasenverschiebung) * KOEFFIZIENT); // Berechnung des Winkels mit Phasenverschiebung im Bogenmass
+    return (int)(sin(winkel_rad) * 511 + 512);      // Berechnung: Sinus * Amplitude (1024/2-1) + Offset (1024/2)
+}
