@@ -373,6 +373,7 @@ InitPeripheralClocks(void)
     // LOSPCP prescale register settings, normally it will be set to default 
     // values
     //
+    SysCtrlRegs.LOSPCP.all = 0x0002;    // 22,5MHz bei 90MHz CPU Takt
 
     //
     //GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 3;  // GPIO18 = XCLKOUT
