@@ -37,9 +37,9 @@ void main(void)
     InitPieCtrl();
     InitPieVectTable();
 
-    /* Initialisierung CPU-Timer0 (90MHz) auf 80us */
+    /* Initialisierung CPU-Timer0 (90MHz) auf 20us */
     InitCpuTimers();
-    ConfigCpuTimer(&CpuTimer0, 90, 80);
+    ConfigCpuTimer(&CpuTimer0, 90, 17);
     CpuTimer0Regs.TCR.bit.TSS = 0;
 
     /* Initialisieren des ADC */
@@ -48,7 +48,7 @@ void main(void)
     /** Initialisierung kritische Register  */
     /* Initialisierung Watchdog             */
     EALLOW;                                 // Sperre von kritischen Registern entriegeln
-    SysCtrlRegs.WDCR = 0x2D;                // Watchdog einschalten und den Prescaler auf 16 setzen
+    SysCtrlRegs.WDCR = 0x2C;                // Watchdog einschalten und den Prescaler auf 16 setzen
 
     /* Initialisierung der GPIO Pins        */
     // Schalter S1
@@ -73,7 +73,7 @@ void main(void)
     PieVectTable.TINT0 = &mein_CPU_Timer_0_ISR; // Eigene ISR aufrufen
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;      // Interrupt-Leitung 7 freigeben
 
-    // Initialisierung ADC
+    /* Initialisierung ADC */
     AdcRegs.ADCSAMPLEMODE.bit.SIMULEN0 = 0;     // SOC0/1 auf "Single Sample Mode" stellen
 
     // ADCINA0 (OUTA)
@@ -103,7 +103,7 @@ void main(void)
             (1<<3)|                         // Taktphase um einem halben Takt verschieben
             (1<<2)|                         // auf SPI Master-Mode stellen
             (1<<1);                         // Master/Slave Transmit-Mode eingeschaltet
-    SpiaRegs.SPIBRR = 44;                   // Baudrate auf 1MBit setzen
+    SpiaRegs.SPIBRR = 5;                   // Baudrate auf 18MBit/s setzen
     SpiaRegs.SPICCR.bit.SPISWRESET = 1;     // Initialer Reset der SPI Schnittstelle A
 
     /*   Low Power Mode einstellen              */
@@ -134,12 +134,15 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
     static unsigned int LED_durchlauf_zaehler = 0;  // Zaehlvariable fuer LED Lauflicht
     static float Winkel = 0;                        //
     unsigned int msg;                               // Variable deklarieren fuer Nachricht 1 und 2, sowie RX Buffer leeren
+    double temp = sin(Winkel*KOEFFIZIENT);      // Deklaratiopn und Berechnung der Sinuswerte
+    int sinus = (temp + 1.0)* 511,                  // Deklaratiopn und Berechnung der Ausgabe
+        sinus180 = (-temp + 1.0)* 511;              // Deklaratiopn und Berechnung der 180 Grad verschobenen Ausgabe
 
     // Interrupt Laufzeitmessung (Anfang)
     GpioDataRegs.GPASET.bit.GPIO0 = 1;              // GPIO0 Ausgang auf 1 setzen
 
     /* LED Lauflicht und WD                         */
-    if (LED_durchlauf_zaehler < 1250) {
+    if (LED_durchlauf_zaehler < 5882) {
         LED_durchlauf_zaehler++;            // pro Interrupt um 1 erhoehen
     } else {
         // Bediehnung des Watchdogs (Good Key part 2)
@@ -190,7 +193,7 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
     /* SPI Nachricht an DAC                         */
     // Nachricht 1
     msg =
-            ((spannung(Winkel, 0) & 0x3FF)<<2)|       // Sinus-Spannung ohne Phasenverschiebung in die Datenbits 11 - 2
+            ((sinus & 0x3FF)<<2)|       // Sinus-Spannung ohne Phasenverschiebung in die Datenbits 11 - 2
             (1<<14)|                        // Speed controll auf "fast mode" stellen
             (1<<12);                        // Nachricht in den Buffer schieben
     GpioDataRegs.GPACLEAR.bit.GPIO22 = 1;   // aktivieren von /CS
@@ -202,7 +205,7 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 
     // Nachricht 2
     msg =
-            ((spannung(Winkel, 180) & 0x3FF)<<2)|      // Sinus-Spannung mit einer Phasenverschiebung von 180 Grad in die Datenbits 11 - 2
+            ((sinus180 & 0x3FF)<<2)|// Sinus-Spannung mit einer Phasenverschiebung von 180 Grad in die Datenbits 11 - 2
             (1<<14)|                        // Speed controll auf "fast mode" stellen
             (1<<15);                         // Die Nachricht in den Ausgang OUTA und den TX Buffer in den Ausgang B Schieben
     GpioDataRegs.GPACLEAR.bit.GPIO22 = 1;   // aktivieren von /CS
@@ -218,8 +221,7 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
         Winkel = 0;                     // Winkel auf Ausgangswert zureucksetzen (0 Grad)
     }
 
-    // Interrupt Laufzeitmessung (Ende)
-    GpioDataRegs.GPACLEAR.bit.GPIO0 = 1;              // GPIO0 Ausgang auf 0 setzen
+
 
     // Freigabe Interrupt (Acknowledge Flag)
     PieCtrlRegs.PIEACK.all = 1;
@@ -244,14 +246,7 @@ __interrupt void my_ADCINT1_ISR(void){
     // Interrupt Laufzeitmessung (Ende)
     GpioDataRegs.GPACLEAR.bit.GPIO0 = 1;              // GPIO0 Ausgang auf 0 setzen
 
-
     // Interruptflag loeschen
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
-}
-
-// Sinus-Spannungsberechnung
-int spannung(float winkel_deg, float phasenverschiebung){   // Winkel im Bogenmass und die Phasenverschiebung im Gradmass
-    double winkel_rad = ((winkel_deg + phasenverschiebung) * KOEFFIZIENT); // Berechnung des Winkels mit Phasenverschiebung im Bogenmass
-    return (int)(sin(winkel_rad) * 511 + 512);      // Berechnung: Sinus * Amplitude (1024/2-1) + Offset (1024/2)
 }

@@ -382,10 +382,7 @@ InitPeripheralClocks(void)
     //
     // XCLKOUT to SYSCLKOUT ratio.  By default XCLKOUT = 1/4 SYSCLKOUT
     //
-    //SysCtrlRegs.XCLK.bit.XCLKOUTDIV=2;
-    //
-    //set to 1/2 SYSCLKOUT
-    SysCtrlRegs.XCLK.bit.XCLKOUTDIV=1;
+    SysCtrlRegs.XCLK.bit.XCLKOUTDIV=2;
 
     //
     // Peripheral clock enables set for the selected peripherals.

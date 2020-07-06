@@ -10,7 +10,7 @@
 #include "math.h"
 
 /*** Makro-Definition                       */
-#define KOEFFIZIENT (double)((double)3.14159265/180) // Koeffizient fuer die Berechnung des Sinus im Gradmass. Multiplikation in der Funktion beschleunigt die Abarbeitung.
+#define PI (double)3.14159265 // Koeffizient fuer die Berechnung des Sinus im Gradmass. Multiplikation in der Funktion beschleunigt die Abarbeitung.
 
 /*** Globale Variablen Deklaration          */
 unsigned int OutA[360],                     // Variable fuer Messung von Ausgang OutA
@@ -48,7 +48,7 @@ void main(void)
     /** Initialisierung kritische Register  */
     /* Initialisierung Watchdog             */
     EALLOW;                                 // Sperre von kritischen Registern entriegeln
-    SysCtrlRegs.WDCR = 0x2D;                // Watchdog einschalten und den Prescaler auf 16 setzen
+    SysCtrlRegs.WDCR = 0x2D;                // Watchdog einschalten
 
     /* Initialisierung der GPIO Pins        */
     // Schalter S1
@@ -244,6 +244,6 @@ __interrupt void my_ADCINT1_ISR(void){
 
 // Sinus-Spannungsberechnung
 int spannung(float winkel_deg, float phasenverschiebung){   // Winkel im Bogenmass und die Phasenverschiebung im Gradmass
-    double winkel_rad = ((winkel_deg + phasenverschiebung) * KOEFFIZIENT); // Berechnung des Winkels mit Phasenverschiebung im Bogenmass
+    double winkel_rad = PI*(winkel_deg + phasenverschiebung)/180; // Berechnung des Winkels mit Phasenverschiebung im Bogenmass
     return (int)(sin(winkel_rad) * 511 + 512);      // Berechnung: Sinus * Amplitude (1024/2-1) + Offset (1024/2)
 }
