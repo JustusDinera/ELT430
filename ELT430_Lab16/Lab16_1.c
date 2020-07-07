@@ -40,7 +40,7 @@ void main(void)
     InitPieCtrl();
     InitPieVectTable();
 
-    /* Inuitialisierung CPU Timer           */
+    /* Initialisierung CPU Timer           */
     InitCpuTimers();
 
     ConfigCpuTimer(&CpuTimer0, 90, 100000); // Initialisierung CPU-Timer0 (10Hz) bei 90MHz CPU-Takt auf 100ms Intervall
@@ -164,7 +164,7 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 __interrupt void my_ADCINT1_ISR(void){
     // Variablen deklaration
     static unsigned int index_verlauf= 0;              // Zaehlvariable fuer Darstellung Temp in Zeit
-    static unsigned int *AdcBufPtr = AdcBuf;                     // Pointer fuer die ADC Messwerte
+    static unsigned int * AdcBufPtr = &AdcBuf[0];                     // Pointer fuer die ADC Messwerte
 
     // Bediehnung des Watchdogs (Good Key part 1)
     EALLOW;
@@ -175,7 +175,7 @@ __interrupt void my_ADCINT1_ISR(void){
     *AdcBufPtr = AdcResult.ADCRESULT1;
     AdcBufPtr++;
     if (&AdcBuf[299] < AdcBufPtr ){
-        AdcBufPtr = AdcBuf;
+        AdcBufPtr = &AdcBuf[0];
     }
 
     // Auslesen des ADC Ergebnisregister 1 (Temperatur)
