@@ -2,7 +2,7 @@
  * Lab16_1.c
  *
  *  Created on:     25.06.2020
- *  Author:         Dinera
+ *  Author:         Justus Weinhold
  *  Description:    PWM Erzeugung und ADC Messung
  */
 
@@ -40,7 +40,7 @@ void main(void)
     InitPieCtrl();
     InitPieVectTable();
 
-    /* Initialisierung CPU Timer           */
+    /* Inuitialisierung CPU Timer           */
     InitCpuTimers();
 
     ConfigCpuTimer(&CpuTimer0, 90, 100000); // Initialisierung CPU-Timer0 (10Hz) bei 90MHz CPU-Takt auf 100ms Intervall
@@ -78,7 +78,7 @@ void main(void)
 
 
     /* Initialisierung Watchdog             */
-    SysCtrlRegs.WDCR = 0x28;                // WD einschalten (PS = 1)
+    SysCtrlRegs.WDCR = 0x28;                // WD einschalten
 
     /* Initialisierung der GPIO Pins        */
     GpioCtrlRegs.GPADIR.bit.GPIO12 = 0;     // Eingang setzen (GPIO 12 [S1])
@@ -164,7 +164,7 @@ __interrupt void mein_CPU_Timer_0_ISR(void)
 __interrupt void my_ADCINT1_ISR(void){
     // Variablen deklaration
     static unsigned int index_verlauf= 0;              // Zaehlvariable fuer Darstellung Temp in Zeit
-    static unsigned int * AdcBufPtr = &AdcBuf[0];                     // Pointer fuer die ADC Messwerte
+    static unsigned int *AdcBufPtr = AdcBuf;                     // Pointer fuer die ADC Messwerte
 
     // Bediehnung des Watchdogs (Good Key part 1)
     EALLOW;
@@ -175,7 +175,7 @@ __interrupt void my_ADCINT1_ISR(void){
     *AdcBufPtr = AdcResult.ADCRESULT1;
     AdcBufPtr++;
     if (&AdcBuf[299] < AdcBufPtr ){
-        AdcBufPtr = &AdcBuf[0];
+        AdcBufPtr = AdcBuf;
     }
 
     // Auslesen des ADC Ergebnisregister 1 (Temperatur)
@@ -211,5 +211,3 @@ void fn_ePWM1A_Init(void){
     // Duty auf 10% einstellen
     EPwm1Regs.CMPA.half.CMPA = 40523;
 }
-
-
